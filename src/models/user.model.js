@@ -54,12 +54,12 @@ const userSchema = new Schema(
 //pre ko use krne k liye arrow function nhi use kr skte kyuki usme this ka context change ho jata hai
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
-  this.password = bcrypt.hashSync(this.password, 10);
+  this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
 userSchema.methods.isPasswordCorrect = async function (password) {
-  await bcrypt.compare(password, this.password);
+  return await bcrypt.compare(password, this.password);
 };
 
 userSchema.methods.generateAccessToken = function () {
