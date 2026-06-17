@@ -4,8 +4,9 @@ import { User } from "../models/user.model.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
-const generateAcsessAndRefereshToken = async (userId) => {
+const generateAccessAndRefereshToken = async (userId) => {
   try {
     const user = await User.findById(userId);
     const accessToken = user.generateAccessToken();
@@ -153,8 +154,8 @@ const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
-        refreshToken: undefined,
+      $unset: {
+        refreshToken: 1,//this removes the field from document
       },
     },
     {
@@ -204,7 +205,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       await generateAccessAndRefereshToken(user._id);
     return res
       .status(200)
-      .coolie("acessToken", accessToken, options)
+      .cookie("acessToken", accessToken, options)
       .cookie("refreshToken", newrefreshToken, options)
       .json(
         new ApiResponse(
@@ -220,18 +221,23 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 const changeCurrentPassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
-  const user = await User.findById(req.user?._id);
+
+  console.log("oldPassword:", oldPassword);
+  const user = await User.findById(req.user?._id).select("+password");
+   console.log("user:", user);
+  console.log("db password:", user?.password);
 
   const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
   if (!isPasswordCorrect) {
     throw new ApiError(400, "Invalid old password");
+  }
     user.password = newPassword;
     await user.save({ validateBeforeSave: false });
 
     return res
       .status(200)
       .json(new ApiResponse(200, {}, "Password changed successfully"));
-  }
+  
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
@@ -383,7 +389,9 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 const getWatchHistory = asyncHandler(async(req, res)=>{
   const user = await User.aggregate([
     {
-      _id: new mongoose.Type.ObjectId(req.user._id)
+      $match:{
+        _id: new mongoose.Types.ObjectId(req.user._id)
+        }
 
     },
    {
