@@ -11,23 +11,22 @@ cloudinary.config({
 
 const uploadToCloudinary = async (localFilePath) => {
   try {
-    // file path check
     if (!localFilePath) {
       console.log("No file path provided");
       return null;
     }
 
-    // convert to absolute path
     const absolutePath = path.resolve(localFilePath);
 
     console.log("Uploading file from:", absolutePath);
 
-    // upload file
-    const response = await cloudinary.uploader.upload(absolutePath);
+    const response = await cloudinary.uploader.upload(absolutePath, {
+      resource_type: "auto",   // auto-detect image/video
+      chunk_size: 6000000      // helps large video upload
+    });
 
     console.log("File uploaded successfully:", response.secure_url);
 
-    // remove local file after successful upload
     if (fs.existsSync(absolutePath)) {
       fs.unlinkSync(absolutePath);
     }
@@ -37,7 +36,6 @@ const uploadToCloudinary = async (localFilePath) => {
   } catch (error) {
     console.log("Cloudinary upload error:", error);
 
-    // remove local file if upload fails
     const absolutePath = path.resolve(localFilePath);
 
     if (fs.existsSync(absolutePath)) {
